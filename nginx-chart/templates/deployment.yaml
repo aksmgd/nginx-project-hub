@@ -1,20 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-app
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Chart.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-app
+      app: {{ .Chart.Name }}
   template:
     metadata:
       labels:
-        app: nginx-app
+        app: {{ .Chart.Name }}
     spec:
       containers:
-      - name: nginx-app
-        image: nginx-app:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 80
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
