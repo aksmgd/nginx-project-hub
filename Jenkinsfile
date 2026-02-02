@@ -2,46 +2,60 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "nginx-app:latest"
+        DOCKER_IMAGE = "aksmgd/nginx_dockerhub:${BUILD_NUMBER}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Use your actual GitHub repo URL and credentialsId if private
                 git(
                     url: 'https://github.com/aksmgd/nginx-project.git',
                     branch: 'main',
-                    credentialsId: '39802547-1f4d-4d7f-9f12-a8a169ad56af'   // replace with your Jenkins credentials ID
+                    credentialsId: 'github-creds'   // replace with your Jenkins credentials ID
                 )
             }
         }
 
-        stage('Build Docker Image in Minikube') {
+        stage('Build Docker Image') {
             steps {
-                // Build inside Minikube’s Docker environment
-                sh "eval \$(minikube docker-env) && docker build -t $DOCKER_IMAGE ."
+                sh "docker build -t $DOCKER_IMAGE ."
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push $DOCKER_IMAGE
+                    docker logout
+                    '''
+                }
             }
         }
 
         stage('Deploy with Helm') {
             steps {
-                 sh ''' 
-                    helm upgrade --install nginx-app ./nginx-chart \
-                         --set image.repository=nginx-app \
-                         --set image.tag=latest \
-                         --set image.pullPolicy=IfNotPresent 
-                 '''// Deploy using Helm chart
-                
+                sh '''
+                helm upgrade --install nginx-release ./nginx-chart \
+                     --set image.repository=aksmgd/nginx_dockerhub \
+                     --set image.tag=${BUILD_NUMBER} \
+                     --set image.pullPolicy=Always \
+                     --wait --timeout 60s
+                '''
+            }
+        }
+
+        stage('Wait for Pod Ready') {
+            steps {
+                sh "kubectl rollout status deployment/nginx-release --timeout=60s"
             }
         }
 
         stage('Expose Service URL') {
             steps {
-                // Print the service URL
-                sh "minikube service nginx-service --url"
+                sh "kubectl get svc nginx-service"
             }
         }
     }
 }
-
