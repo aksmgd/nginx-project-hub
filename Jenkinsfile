@@ -9,9 +9,9 @@ pipeline {
         stage('Checkout') {
             steps {
                 git(
-                    url: 'https://github.com/aksmgd/nginx-project.git',
+                    url: 'https://github.com/aksmgd/nginx-project-hub.git',
                     branch: 'main',
-                    credentialsId: 'github-creds'   // replace with your Jenkins credentials ID
+                    credentialsId: 'github-creds'   
                 )
             }
         }
