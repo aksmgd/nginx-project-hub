@@ -1,7 +1,8 @@
 image:
-  repository: nginx-app
-  tag: latest
-  pullPolicy: IfNotPresent
+  repository: aksmgd/nginx_dockerhub   
+  tag: "latest"                        
+  pullPolicy: Always                   
+
 service:
   type: NodePort
   port: 80
